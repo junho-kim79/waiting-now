@@ -1,10 +1,629 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-  <title>Waiting Now</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RBX Space — 나만의 로블록스 공간</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0f1a;
+  --surface:#151828;
+  --surface2:#1c2035;
+  --border:#252a42;
+  --primary:#00d4ff;
+  --primary-dim:rgba(0,212,255,0.12);
+  --accent:#ff4d6d;
+  --accent2:#ffd60a;
+  --green:#00e676;
+  --text:#e8eaf6;
+  --text-sub:#7c84a8;
+  --text-muted:#3d4466;
+  --radius:16px;
+  --font:'Nunito',sans-serif;
+  --mono:'Space Mono',monospace;
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* BG GRID */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(0,212,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.03) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0;
+}
+
+/* NAV */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  height:64px;padding:0 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(13,15,26,0.85);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+}
+.nav-logo{font-size:1.3rem;font-weight:900;letter-spacing:-1px;color:var(--primary);font-family:var(--mono)}
+.nav-logo span{color:var(--accent)}
+.nav-links{display:flex;gap:8px;align-items:center}
+.nav-link{color:var(--text-sub);font-size:0.85rem;font-weight:700;padding:7px 14px;border-radius:30px;cursor:pointer;border:none;background:none;font-family:var(--font);transition:color 0.15s,background 0.15s}
+.nav-link:hover{color:var(--text);background:var(--surface2)}
+.nav-link.active{color:var(--primary)}
+.nav-btn{background:var(--primary);color:#000;border:none;cursor:pointer;font-family:var(--font);font-weight:800;font-size:0.85rem;padding:8px 18px;border-radius:30px;transition:transform 0.15s,box-shadow 0.15s}
+.nav-btn:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,212,255,0.4)}
+
+/* PAGES */
+.page{display:none;padding-top:64px;position:relative;z-index:1}
+.page.active{display:block}
+
+/* ============ HERO ============ */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px 24px 60px;position:relative}
+.hero-glow{position:absolute;top:20%;left:50%;transform:translateX(-50%);width:600px;height:600px;background:radial-gradient(circle,rgba(0,212,255,0.08) 0%,transparent 70%);pointer-events:none}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:var(--primary-dim);border:1px solid rgba(0,212,255,0.25);color:var(--primary);font-size:0.78rem;font-weight:800;padding:6px 16px;border-radius:30px;margin-bottom:32px;font-family:var(--mono);animation:fadeUp 0.6s ease both}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.5)}}
+.hero-title{font-size:clamp(2.8rem,8vw,5.5rem);font-weight:900;letter-spacing:-3px;line-height:1.05;margin-bottom:24px;animation:fadeUp 0.6s 0.1s ease both}
+.hero-title .c1{color:var(--primary)}
+.hero-title .c2{color:var(--accent)}
+.hero-sub{font-size:1.1rem;color:var(--text-sub);max-width:480px;line-height:1.7;margin-bottom:40px;animation:fadeUp 0.6s 0.2s ease both}
+.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:64px;animation:fadeUp 0.6s 0.3s ease both}
+.btn-primary{background:var(--primary);color:#000;border:none;cursor:pointer;font-family:var(--font);font-weight:800;font-size:1rem;padding:14px 30px;border-radius:50px;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 0 24px rgba(0,212,255,0.3)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 0 40px rgba(0,212,255,0.5)}
+.btn-ghost{background:transparent;color:var(--text);border:1.5px solid var(--border);cursor:pointer;font-family:var(--font);font-weight:700;font-size:1rem;padding:14px 28px;border-radius:50px;transition:border-color 0.15s,transform 0.15s}
+.btn-ghost:hover{border-color:var(--primary);transform:translateY(-2px)}
+
+/* STATS ROW */
+.stats-row{display:flex;gap:32px;justify-content:center;flex-wrap:wrap;animation:fadeUp 0.6s 0.4s ease both}
+.stat-item{text-align:center}
+.stat-num{font-size:1.8rem;font-weight:900;color:var(--primary);font-family:var(--mono);letter-spacing:-1px}
+.stat-label{font-size:0.75rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:1px}
+
+/* SPACES PREVIEW */
+.spaces-preview{margin-top:64px;width:100%;max-width:900px;animation:fadeUp 0.6s 0.5s ease both}
+.spaces-grid-preview{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.space-preview-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:left;transition:border-color 0.2s,transform 0.2s;cursor:pointer}
+.space-preview-card:hover{border-color:var(--primary);transform:translateY(-3px)}
+.spc-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.spc-avatar{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+.spc-name{font-weight:800;font-size:0.9rem}
+.spc-tag{font-size:0.7rem;color:var(--text-muted)}
+.spc-members{display:flex;align-items:center;gap:6px;font-size:0.75rem;color:var(--text-sub)}
+.member-pips{display:flex}
+.pip{width:20px;height:20px;border-radius:50%;border:2px solid var(--surface);margin-left:-5px;font-size:0.55rem;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff}
+.spc-lock{margin-left:auto;font-size:0.7rem;color:var(--accent2);font-weight:700}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* ============ SPACES PAGE ============ */
+.page-header{padding:40px 24px 24px;max-width:1000px;margin:0 auto}
+.page-title{font-size:2rem;font-weight:900;letter-spacing:-1.5px;margin-bottom:6px}
+.page-sub{color:var(--text-sub);font-size:0.9rem}
+.page-toolbar{display:flex;gap:10px;align-items:center;padding:0 24px 24px;max-width:1000px;margin:0 auto;flex-wrap:wrap}
+.search-box{flex:1;min-width:200px;display:flex;align-items:center;gap:10px;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:10px 16px;transition:border-color 0.15s}
+.search-box:focus-within{border-color:var(--primary)}
+.search-box input{background:none;border:none;outline:none;color:var(--text);font-family:var(--font);font-size:0.9rem;width:100%}
+.search-box input::placeholder{color:var(--text-muted)}
+.filter-chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:7px 14px;border-radius:30px;font-size:0.78rem;font-weight:700;cursor:pointer;border:1.5px solid var(--border);color:var(--text-sub);background:var(--surface);transition:all 0.15s;font-family:var(--font)}
+.chip.on{background:var(--primary-dim);border-color:var(--primary);color:var(--primary)}
+.spaces-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;padding:0 24px 60px;max-width:1000px;margin:0 auto}
+.space-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:border-color 0.2s,transform 0.2s,box-shadow 0.2s}
+.space-card:hover{border-color:var(--primary);transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,212,255,0.1)}
+.sc-banner{height:80px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;position:relative}
+.sc-body{padding:16px}
+.sc-name{font-size:1rem;font-weight:800;margin-bottom:4px}
+.sc-desc{font-size:0.8rem;color:var(--text-sub);margin-bottom:12px;line-height:1.5}
+.sc-footer{display:flex;align-items:center;justify-content:space-between}
+.sc-members-row{display:flex;align-items:center;gap:6px;font-size:0.75rem;color:var(--text-sub)}
+.sc-badge{font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:20px}
+.badge-open{background:rgba(0,230,118,0.15);color:var(--green)}
+.badge-private{background:rgba(255,77,109,0.15);color:var(--accent)}
+.badge-invite{background:rgba(255,214,10,0.15);color:var(--accent2)}
+
+/* CREATE SPACE MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1.5px solid var(--border);border-radius:24px;padding:36px;max-width:460px;width:90%;animation:fadeUp 0.3s ease}
+.modal-title{font-size:1.4rem;font-weight:900;letter-spacing:-1px;margin-bottom:6px}
+.modal-sub{font-size:0.85rem;color:var(--text-sub);margin-bottom:28px}
+.form-group{margin-bottom:16px}
+.form-label{font-size:0.78rem;font-weight:700;color:var(--text-sub);margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:0.5px}
+.form-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-family:var(--font);font-size:0.9rem;outline:none;transition:border-color 0.15s}
+.form-input:focus{border-color:var(--primary)}
+.emoji-picker{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.ep{width:40px;height:40px;border-radius:10px;background:var(--surface2);border:1.5px solid var(--border);cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;transition:border-color 0.15s}
+.ep.sel{border-color:var(--primary);background:var(--primary-dim)}
+.type-options{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+.type-opt{padding:10px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;text-align:center;transition:all 0.15s}
+.type-opt.sel{border-color:var(--primary);background:var(--primary-dim)}
+.type-opt-icon{font-size:1.2rem;margin-bottom:4px}
+.type-opt-label{font-size:0.72rem;font-weight:700;color:var(--text-sub)}
+.modal-btns{display:flex;gap:10px;margin-top:24px}
+.btn-cancel{flex:1;background:var(--surface2);color:var(--text-sub);border:none;cursor:pointer;font-family:var(--font);font-weight:700;padding:12px;border-radius:12px}
+.btn-create{flex:2;background:var(--primary);color:#000;border:none;cursor:pointer;font-family:var(--font);font-weight:800;padding:12px;border-radius:12px;transition:box-shadow 0.15s}
+.btn-create:hover{box-shadow:0 0 20px rgba(0,212,255,0.4)}
+
+/* ============ PROFILE PAGE ============ */
+.profile-hero{padding:40px 24px;max-width:800px;margin:0 auto;display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+.profile-avatar-wrap{position:relative}
+.profile-avatar{width:100px;height:100px;border-radius:20px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-size:3rem;border:3px solid var(--border)}
+.profile-online{position:absolute;bottom:6px;right:6px;width:14px;height:14px;border-radius:50%;background:var(--green);border:2px solid var(--surface)}
+.profile-info{flex:1;min-width:200px}
+.profile-name{font-size:2rem;font-weight:900;letter-spacing:-1.5px}
+.profile-handle{font-size:0.85rem;color:var(--text-muted);font-family:var(--mono);margin-bottom:10px}
+.profile-bio{font-size:0.9rem;color:var(--text-sub);line-height:1.6;margin-bottom:16px}
+.profile-tags{display:flex;gap:6px;flex-wrap:wrap}
+.ptag{font-size:0.72rem;font-weight:700;padding:4px 10px;border-radius:20px;background:var(--primary-dim);color:var(--primary);border:1px solid rgba(0,212,255,0.2)}
+.profile-stats{display:flex;gap:20px;padding:20px 24px;max-width:800px;margin:0 auto;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.pstat{text-align:center}
+.pstat-num{font-size:1.4rem;font-weight:900;color:var(--primary);font-family:var(--mono)}
+.pstat-label{font-size:0.72rem;color:var(--text-muted);font-weight:700;text-transform:uppercase}
+.profile-section{padding:24px;max-width:800px;margin:0 auto}
+.psec-title{font-size:1rem;font-weight:800;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.psec-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* SHOWCASE GRID */
+.showcase-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.showcase-item{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color 0.15s,transform 0.15s}
+.showcase-item:hover{border-color:var(--primary);transform:translateY(-2px)}
+.si-thumb{height:90px;display:flex;align-items:center;justify-content:center;font-size:2.5rem}
+.si-label{padding:8px 10px;font-size:0.78rem;font-weight:700}
+.si-sub{font-size:0.68rem;color:var(--text-muted);padding:0 10px 10px}
+
+/* GUESTBOOK */
+.guestbook{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.gb-entry{background:var(--surface2);border-radius:12px;padding:14px}
+.gb-header{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.gb-avatar{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:800;color:#000}
+.gb-name{font-size:0.82rem;font-weight:700}
+.gb-time{font-size:0.72rem;color:var(--text-muted);margin-left:auto}
+.gb-msg{font-size:0.85rem;color:var(--text-sub);line-height:1.5}
+.gb-input-row{display:flex;gap:8px}
+.gb-input{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:var(--font);font-size:0.85rem;outline:none}
+.gb-input:focus{border-color:var(--primary)}
+.gb-send{background:var(--primary);color:#000;border:none;cursor:pointer;font-family:var(--font);font-weight:800;padding:10px 18px;border-radius:10px;font-size:0.85rem}
+
+/* ============ PARTY PAGE ============ */
+.party-section{padding:24px;max-width:900px;margin:0 auto}
+.party-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.party-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:20px;transition:border-color 0.2s,transform 0.2s}
+.party-card:hover{border-color:var(--primary);transform:translateY(-3px)}
+.pc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.pc-game{display:flex;align-items:center;gap:10px}
+.pc-game-icon{width:44px;height:44px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:1.5rem}
+.pc-game-name{font-weight:800;font-size:0.95rem}
+.pc-game-mode{font-size:0.75rem;color:var(--text-muted)}
+.pc-status{font-size:0.72rem;font-weight:700;padding:4px 10px;border-radius:20px}
+.status-waiting{background:rgba(0,230,118,0.15);color:var(--green)}
+.status-full{background:rgba(255,77,109,0.15);color:var(--accent)}
+.status-soon{background:rgba(255,214,10,0.15);color:var(--accent2)}
+.pc-desc{font-size:0.82rem;color:var(--text-sub);margin-bottom:14px;line-height:1.5}
+.pc-slots{display:flex;gap:6px;margin-bottom:14px}
+.slot{width:32px;height:32px;border-radius:8px;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:0.85rem}
+.slot.filled{border-style:solid;border-color:var(--primary);background:var(--primary-dim)}
+.slot.leader{border-color:var(--accent2);background:rgba(255,214,10,0.1)}
+.pc-footer{display:flex;align-items:center;justify-content:space-between}
+.pc-schedule{font-size:0.75rem;color:var(--text-muted);display:flex;align-items:center;gap:4px}
+.btn-join{background:var(--primary);color:#000;border:none;cursor:pointer;font-family:var(--font);font-weight:800;font-size:0.8rem;padding:8px 18px;border-radius:20px;transition:transform 0.15s}
+.btn-join:hover{transform:scale(1.05)}
+.btn-join.full{background:var(--border);color:var(--text-muted);cursor:not-allowed}
+
+/* CREATE PARTY */
+.create-party-btn{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--surface);border:2px dashed var(--border);border-radius:var(--radius);padding:40px;cursor:pointer;transition:border-color 0.15s,background 0.15s;font-weight:700;color:var(--text-muted);font-size:0.9rem;font-family:var(--font)}
+.create-party-btn:hover{border-color:var(--primary);background:var(--primary-dim);color:var(--primary)}
+
+/* TOASTS */
+.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:300;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 18px;font-size:0.85rem;font-weight:600;display:flex;align-items:center;gap:8px;animation:fadeUp 0.3s ease;box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+.toast.success{border-color:var(--green);color:var(--green)}
+.toast.info{border-color:var(--primary);color:var(--primary)}
+
+@media(max-width:600px){
+  .spaces-grid-preview{grid-template-columns:1fr}
+  .nav-links .nav-link:not(.show-mobile){display:none}
+  .profile-hero{flex-direction:column}
+}
+</style>
 </head>
 <body>
-  <h1>Waiting Now 시작됨 🚀</h1>
-  <p>내 사이트 첫 화면입니다</p>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">RBX<span>Space</span></div>
+  <div class="nav-links">
+    <button class="nav-link show-mobile active" onclick="goPage('home')">🏠 홈</button>
+    <button class="nav-link" onclick="goPage('spaces')">🌐 스페이스</button>
+    <button class="nav-link" onclick="goPage('party')">🎮 파티</button>
+    <button class="nav-link" onclick="goPage('profile')">👤 프로필</button>
+  </div>
+  <button class="nav-btn" onclick="openCreateModal()">+ 스페이스 만들기</button>
+</nav>
+
+<!-- ============ HOME PAGE ============ -->
+<div id="page-home" class="page active">
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-badge"><span class="live-dot"></span> 지금 1,247명 접속 중</div>
+    <h1 class="hero-title">나만의 <span class="c1">로블록스</span><br>프라이빗 <span class="c2">스페이스</span></h1>
+    <p class="hero-sub">친구들만 입장 가능한 나만의 공간을 만들고<br>아바타 쇼룸, 게임 파티, 커뮤니티를 한 곳에서.</p>
+    <div class="hero-btns">
+      <button class="btn-primary" onclick="goPage('spaces')">🚀 스페이스 둘러보기</button>
+      <button class="btn-ghost" onclick="openCreateModal()">✨ 내 스페이스 만들기</button>
+    </div>
+    <div class="stats-row">
+      <div class="stat-item"><div class="stat-num">3.2K</div><div class="stat-label">스페이스</div></div>
+      <div class="stat-item"><div class="stat-num">48K</div><div class="stat-label">유저</div></div>
+      <div class="stat-item"><div class="stat-num">12K</div><div class="stat-label">오늘 파티</div></div>
+    </div>
+
+    <div class="spaces-preview">
+      <div class="spaces-grid-preview">
+        <div class="space-preview-card" onclick="goPage('spaces')">
+          <div class="spc-header">
+            <div class="spc-avatar" style="background:#1a1f3a">🏰</div>
+            <div><div class="spc-name">Castle Raiders KR</div><div class="spc-tag">PVP · 클랜</div></div>
+          </div>
+          <div class="spc-members">
+            <div class="member-pips">
+              <div class="pip" style="background:#3b6bff">K</div>
+              <div class="pip" style="background:#ff5c5c">J</div>
+              <div class="pip" style="background:#00e676">P</div>
+            </div>
+            <span>멤버 124명</span>
+            <span class="spc-lock">🔒 초대</span>
+          </div>
+        </div>
+        <div class="space-preview-card" onclick="goPage('spaces')">
+          <div class="spc-header">
+            <div class="spc-avatar" style="background:#1a2a1a">🌿</div>
+            <div><div class="spc-name">힐링 팜 라이프</div><div class="spc-tag">농장 · 힐링</div></div>
+          </div>
+          <div class="spc-members">
+            <div class="member-pips">
+              <div class="pip" style="background:#ffd60a">S</div>
+              <div class="pip" style="background:#00d4ff">M</div>
+            </div>
+            <span>멤버 89명</span>
+            <span class="spc-lock">🌐 공개</span>
+          </div>
+        </div>
+        <div class="space-preview-card" onclick="goPage('spaces')">
+          <div class="spc-header">
+            <div class="spc-avatar" style="background:#2a1a1a">🏎️</div>
+            <div><div class="spc-name">Speed Racers</div><div class="spc-tag">레이싱 · 경쟁</div></div>
+          </div>
+          <div class="spc-members">
+            <div class="member-pips">
+              <div class="pip" style="background:#ff4d6d">A</div>
+              <div class="pip" style="background:#ffd60a">B</div>
+              <div class="pip" style="background:#00d4ff">C</div>
+            </div>
+            <span>멤버 203명</span>
+            <span class="spc-lock">🔒 비공개</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============ SPACES PAGE ============ -->
+<div id="page-spaces" class="page">
+  <div class="page-header">
+    <div class="page-title">🌐 스페이스</div>
+    <div class="page-sub">나만의 프라이빗 공간을 찾거나 만들어보세요</div>
+  </div>
+  <div class="page-toolbar">
+    <div class="search-box">
+      <span>🔍</span>
+      <input type="text" placeholder="스페이스 이름이나 태그 검색..." oninput="filterSpaces(this.value)"/>
+    </div>
+    <div class="filter-chips">
+      <button class="chip on" onclick="setFilter(this,'전체')">전체</button>
+      <button class="chip" onclick="setFilter(this,'PVP')">⚔️ PVP</button>
+      <button class="chip" onclick="setFilter(this,'힐링')">🌿 힐링</button>
+      <button class="chip" onclick="setFilter(this,'레이싱')">🏎️ 레이싱</button>
+      <button class="chip" onclick="setFilter(this,'공개')">🌐 공개</button>
+    </div>
+  </div>
+  <div class="spaces-list" id="spacesList"></div>
+</div>
+
+<!-- ============ PARTY PAGE ============ -->
+<div id="page-party" class="page">
+  <div class="page-header">
+    <div class="page-title">🎮 게임 파티</div>
+    <div class="page-sub">친구들과 함께할 파티를 만들거나 참가하세요</div>
+  </div>
+  <div class="party-section">
+    <div class="party-grid" id="partyGrid"></div>
+  </div>
+</div>
+
+<!-- ============ PROFILE PAGE ============ -->
+<div id="page-profile" class="page">
+  <div class="profile-hero">
+    <div class="profile-avatar-wrap">
+      <div class="profile-avatar">🧑‍🚀</div>
+      <div class="profile-online"></div>
+    </div>
+    <div class="profile-info">
+      <div class="profile-name">JunhoPlayer</div>
+      <div class="profile-handle">@junho_rbx · Lv.42</div>
+      <div class="profile-bio">로블록스 5년차 플레이어 🎮 PVP 좋아하고 힐링 게임도 즐김. 대구 기반 클랜 운영 중.</div>
+      <div class="profile-tags">
+        <span class="ptag">⚔️ PVP</span>
+        <span class="ptag">🏰 클랜장</span>
+        <span class="ptag">🎯 저격수</span>
+        <span class="ptag">🌐 한국</span>
+      </div>
+    </div>
+    <button class="btn-primary" style="align-self:flex-start" onclick="toast('프로필 수정 기능은 곧 오픈!','info')">✏️ 프로필 수정</button>
+  </div>
+  <div class="profile-stats">
+    <div class="pstat"><div class="pstat-num">42</div><div class="pstat-label">레벨</div></div>
+    <div class="pstat"><div class="pstat-num">3</div><div class="pstat-label">스페이스</div></div>
+    <div class="pstat"><div class="pstat-num">89</div><div class="pstat-label">팔로워</div></div>
+    <div class="pstat"><div class="pstat-num">124</div><div class="pstat-label">파티 참가</div></div>
+    <div class="pstat"><div class="pstat-num">★4.8</div><div class="pstat-label">평점</div></div>
+  </div>
+
+  <!-- SHOWCASE -->
+  <div class="profile-section">
+    <div class="psec-title">🖼️ 아바타 쇼룸</div>
+    <div class="showcase-grid">
+      <div class="showcase-item">
+        <div class="si-thumb" style="background:linear-gradient(135deg,#0d1a3a,#1a3a6b)">🧑‍🚀</div>
+        <div class="si-label">우주 탐험가</div>
+        <div class="si-sub">메인 룩</div>
+      </div>
+      <div class="showcase-item">
+        <div class="si-thumb" style="background:linear-gradient(135deg,#1a0d0d,#3a1a1a)">🥷</div>
+        <div class="si-label">닌자 세트</div>
+        <div class="si-sub">PVP 전용</div>
+      </div>
+      <div class="showcase-item">
+        <div class="si-thumb" style="background:linear-gradient(135deg,#0d2a1a,#1a4a2a)">🌿</div>
+        <div class="si-label">농부 코스튬</div>
+        <div class="si-sub">힐링 게임용</div>
+      </div>
+      <div class="showcase-item" onclick="toast('아이템 추가 기능 준비 중!','info')" style="border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;padding:20px;color:var(--text-muted);font-size:0.8rem;cursor:pointer">
+        <div style="font-size:1.5rem">➕</div>
+        <div>추가하기</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GUESTBOOK -->
+  <div class="profile-section">
+    <div class="psec-title">💬 방명록</div>
+    <div class="guestbook" id="guestbook">
+      <div class="gb-entry">
+        <div class="gb-header">
+          <div class="gb-avatar">K</div>
+          <div class="gb-name">KingSlayer99</div>
+          <div class="gb-time">2시간 전</div>
+        </div>
+        <div class="gb-msg">파티 항상 재밌어요! 다음에 또 같이 해요 🎮</div>
+      </div>
+      <div class="gb-entry">
+        <div class="gb-header">
+          <div class="gb-avatar" style="background:linear-gradient(135deg,#ff4d6d,#ff8c00)">S</div>
+          <div class="gb-name">StarFarm_J</div>
+          <div class="gb-time">5시간 전</div>
+        </div>
+        <div class="gb-msg">힐링 팜 파티 초대 감사해요 🌿 최고였어요</div>
+      </div>
+    </div>
+    <div class="gb-input-row">
+      <input class="gb-input" id="gbInput" placeholder="방명록 남기기..." maxlength="80"/>
+      <button class="gb-send" onclick="sendGuestbook()">전송</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE MODAL -->
+<div class="modal-overlay" id="createModal" onclick="closeCreateModal(event)">
+  <div class="modal">
+    <div class="modal-title">✨ 스페이스 만들기</div>
+    <div class="modal-sub">나만의 프라이빗 공간을 지금 바로 만들어보세요</div>
+    <div class="form-group">
+      <label class="form-label">스페이스 이름</label>
+      <input class="form-input" id="spaceName" placeholder="예: 우리들만의 농장"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">소개</label>
+      <input class="form-input" id="spaceDesc" placeholder="어떤 공간인지 한 줄로 설명해주세요"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">아이콘 선택</label>
+      <div class="emoji-picker" id="emojiPicker">
+        <div class="ep sel" onclick="selEmoji(this,'🏰')">🏰</div>
+        <div class="ep" onclick="selEmoji(this,'🌿')">🌿</div>
+        <div class="ep" onclick="selEmoji(this,'🏎️')">🏎️</div>
+        <div class="ep" onclick="selEmoji(this,'⚔️')">⚔️</div>
+        <div class="ep" onclick="selEmoji(this,'🚀')">🚀</div>
+        <div class="ep" onclick="selEmoji(this,'🎯')">🎯</div>
+        <div class="ep" onclick="selEmoji(this,'🎪')">🎪</div>
+        <div class="ep" onclick="selEmoji(this,'🌊')">🌊</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">공개 설정</label>
+      <div class="type-options">
+        <div class="type-opt sel" onclick="selType(this,'open')"><div class="type-opt-icon">🌐</div><div class="type-opt-label">공개</div></div>
+        <div class="type-opt" onclick="selType(this,'invite')"><div class="type-opt-icon">🔑</div><div class="type-opt-label">초대전용</div></div>
+        <div class="type-opt" onclick="selType(this,'private')"><div class="type-opt-icon">🔒</div><div class="type-opt-label">비공개</div></div>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeCreateModalDirect()">취소</button>
+      <button class="btn-create" onclick="createSpace()">🚀 만들기</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOASTS -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// DATA
+const SPACES = [
+  {id:1,name:'Castle Raiders KR',desc:'최강 PVP 클랜! 매일 저녁 레이드 진행. 실력자 환영.',emoji:'🏰',tag:'PVP · 클랜',members:124,type:'invite',color:'#0d1a3a'},
+  {id:2,name:'힐링 팜 라이프',desc:'바쁜 일상 속 힐링을 원한다면. 같이 농사 짓고 수다 떠요.',emoji:'🌿',tag:'농장 · 힐링',members:89,type:'open',color:'#0d2a1a'},
+  {id:3,name:'Speed Racers KR',desc:'최고속도를 향한 레이서들의 모임. 주간 토너먼트 운영.',emoji:'🏎️',tag:'레이싱 · 경쟁',members:203,type:'private',color:'#2a1a0d'},
+  {id:4,name:'우주 탐험대',desc:'함께 우주를 탐험하는 스페이스. 퀘스트 클리어 도전!',emoji:'🚀',tag:'탐험 · 협동',members:56,type:'open',color:'#0a0d2a'},
+  {id:5,name:'스나이퍼 길드',desc:'정밀 사격의 달인들 모집 중. 전략적 PVP만 합니다.',emoji:'🎯',tag:'PVP · 길드',members:77,type:'invite',color:'#1a0a0a'},
+  {id:6,name:'서울 크루',desc:'서울/수도권 유저들의 모임. 오프 만남도 가끔 해요 🙌',emoji:'🌆',tag:'지역 · 친목',members:312,type:'open',color:'#0a1a2a'},
+];
+
+const PARTIES = [
+  {id:1,game:'Blade Ball',icon:'⚔️',mode:'토너먼트 모드',desc:'4강 토너먼트 같이 하실 분! 실력 무관 환영',slots:4,filled:2,status:'waiting',time:'오늘 저녁 8시'},
+  {id:2,game:'Pet Simulator',icon:'🐾',mode:'협동 파밍',desc:'펫 파밍 같이 해요. 초보도 가르쳐드림',slots:3,filled:3,status:'full',time:'지금 바로'},
+  {id:3,game:'Adopt Me!',icon:'🏠',mode:'트레이딩',desc:'희귀 펫 트레이드 파티. 넷워스 있으신 분들만',slots:6,filled:4,status:'waiting',time:'오늘 오후 3시'},
+  {id:4,game:'Da Hood',icon:'🏙️',mode:'팀 데스매치',desc:'팀전 5v5. 팀원 모집 중 실력자 우선',slots:5,filled:3,status:'soon',time:'내일 오후 7시'},
+  {id:5,game:'Brookhaven',icon:'🌆',mode:'RP 서버',desc:'롤플레이 같이 하실 분. 스토리 있는 RP 선호',slots:8,filled:5,status:'waiting',time:'상시'},
+];
+
+let selectedEmoji = '🏰';
+let selectedType = 'open';
+let currentFilter = '전체';
+let spaces = [...SPACES];
+
+// RENDER
+function renderSpaces(list) {
+  const el = document.getElementById('spacesList');
+  const typeMap = {open:{label:'🌐 공개',cls:'badge-open'},invite:{label:'🔑 초대',cls:'badge-invite'},private:{label:'🔒 비공개',cls:'badge-private'}};
+  el.innerHTML = list.map(s=>`
+    <div class="space-card" onclick="toast('${s.name} 스페이스에 입장 요청!','info')">
+      <div class="sc-banner" style="background:${s.color}">${s.emoji}</div>
+      <div class="sc-body">
+        <div class="sc-name">${s.name}</div>
+        <div class="sc-desc">${s.desc}</div>
+        <div class="sc-footer">
+          <div class="sc-members-row">👥 ${s.members}명</div>
+          <span class="sc-badge ${typeMap[s.type].cls}">${typeMap[s.type].label}</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderParties() {
+  const el = document.getElementById('partyGrid');
+  const statusMap = {waiting:{label:'참가 가능',cls:'status-waiting'},full:{label:'인원 마감',cls:'status-full'},soon:{label:'곧 시작',cls:'status-soon'}};
+  const cards = PARTIES.map(p=>{
+    const slots = Array.from({length:p.slots},(_,i)=>{
+      if(i===0) return `<div class="slot filled leader">👑</div>`;
+      if(i<p.filled) return `<div class="slot filled">✓</div>`;
+      return `<div class="slot"></div>`;
+    }).join('');
+    const btnClass = p.status==='full'?'btn-join full':'btn-join';
+    const btnText = p.status==='full'?'마감':'참가하기';
+    return `
+      <div class="party-card">
+        <div class="pc-header">
+          <div class="pc-game">
+            <div class="pc-game-icon">${p.icon}</div>
+            <div><div class="pc-game-name">${p.game}</div><div class="pc-game-mode">${p.mode}</div></div>
+          </div>
+          <span class="pc-status ${statusMap[p.status].cls}">${statusMap[p.status].label}</span>
+        </div>
+        <div class="pc-desc">${p.desc}</div>
+        <div class="pc-slots">${slots}</div>
+        <div class="pc-footer">
+          <div class="pc-schedule">🕐 ${p.time}</div>
+          <button class="${btnClass}" onclick="${p.status!=='full'?`joinParty(${p.id})`:'void 0'}">${btnText}</button>
+        </div>
+      </div>
+    `;
+  });
+  cards.push(`<button class="create-party-btn" onclick="toast('파티 만들기 기능 오픈 예정!','info')">＋ 새 파티 만들기</button>`);
+  el.innerHTML = cards.join('');
+}
+
+function joinParty(id) {
+  const p = PARTIES.find(x=>x.id===id);
+  if(p && p.filled < p.slots) { p.filled++; if(p.filled===p.slots) p.status='full'; renderParties(); toast(`${p.game} 파티 참가 완료!`,'success'); }
+}
+
+function filterSpaces(q) {
+  const filtered = spaces.filter(s=>s.name.includes(q)||s.desc.includes(q)||s.tag.includes(q));
+  renderSpaces(filtered);
+}
+
+function setFilter(el, f) {
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  currentFilter = f;
+  const filtered = f==='전체'?spaces:f==='공개'?spaces.filter(s=>s.type==='open'):spaces.filter(s=>s.tag.includes(f));
+  renderSpaces(filtered);
+}
+
+// NAV
+function goPage(name) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.nav-link').forEach(l=>{ if(l.textContent.includes(name==='home'?'홈':name==='spaces'?'스페이스':name==='party'?'파티':'프로필')) l.classList.add('active'); });
+  window.scrollTo(0,0);
+}
+
+// MODAL
+function openCreateModal(){ document.getElementById('createModal').classList.add('open'); }
+function closeCreateModal(e){ if(e.target===document.getElementById('createModal')) closeCreateModalDirect(); }
+function closeCreateModalDirect(){ document.getElementById('createModal').classList.remove('open'); }
+
+function selEmoji(el, emoji) { document.querySelectorAll('.ep').forEach(e=>e.classList.remove('sel')); el.classList.add('sel'); selectedEmoji=emoji; }
+function selType(el, type) { document.querySelectorAll('.type-opt').forEach(e=>e.classList.remove('sel')); el.classList.add('sel'); selectedType=type; }
+
+function createSpace() {
+  const name = document.getElementById('spaceName').value.trim();
+  const desc = document.getElementById('spaceDesc').value.trim();
+  if(!name) { toast('스페이스 이름을 입력해주세요','info'); return; }
+  const newSpace = {id:Date.now(),name,desc:desc||'새로운 스페이스에 오신 것을 환영해요!',emoji:selectedEmoji,tag:'나의 스페이스',members:1,type:selectedType,color:'#0d0f1a'};
+  spaces.unshift(newSpace);
+  closeCreateModalDirect();
+  goPage('spaces');
+  renderSpaces(spaces);
+  toast(`"${name}" 스페이스가 만들어졌어요! 🎉`,'success');
+  document.getElementById('spaceName').value='';
+  document.getElementById('spaceDesc').value='';
+}
+
+// GUESTBOOK
+function sendGuestbook() {
+  const val = document.getElementById('gbInput').value.trim();
+  if(!val) return;
+  const gb = document.getElementById('guestbook');
+  const entry = document.createElement('div');
+  entry.className='gb-entry';
+  entry.innerHTML=`<div class="gb-header"><div class="gb-avatar" style="background:linear-gradient(135deg,var(--primary),var(--accent))">나</div><div class="gb-name">나</div><div class="gb-time">방금</div></div><div class="gb-msg">${val}</div>`;
+  gb.prepend(entry);
+  document.getElementById('gbInput').value='';
+  toast('방명록을 남겼어요!','success');
+}
+
+// TOAST
+function toast(msg, type='success') {
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className=`toast ${type}`;
+  el.innerHTML=`${type==='success'?'✅':'ℹ️'} ${msg}`;
+  wrap.appendChild(el);
+  setTimeout(()=>el.remove(), 3000);
+}
+
+// SCROLL REVEAL
+const obs = new IntersectionObserver(entries=>{
+  entries.forEach(e=>{ if(e.isIntersecting){e.target.style.opacity='1';e.target.style.transform='translateY(0)';} });
+},{threshold:0.08});
+document.querySelectorAll('.space-card,.party-card,.feat-card').forEach(el=>{
+  el.style.opacity='0';el.style.transform='translateY(16px)';el.style.transition='opacity 0.4s ease,transform 0.4s ease';obs.observe(el);
+});
+
+// INIT
+renderSpaces(spaces);
+renderParties();
+</script>
 </body>
 </html>
