@@ -1543,19 +1543,38 @@ function speakChar() {
 ═══════════════════════════════════════════════════════ */
 let traceCtx, isDrawing=false, traceStrokeCount=0, tracePaths=[];
 
+function getKrPronunciation(c) {
+  const map = {
+    あ:'아', い:'이', う:'우', え:'에', お:'오',
+    か:'카', き:'키', く:'쿠', け:'케', こ:'코',
+    さ:'사', し:'시', す:'스', せ:'세', そ:'소',
+    た:'타', ち:'치', つ:'츠', て:'테', と:'토',
+    な:'나', に:'니', ぬ:'누', ね:'네', の:'노',
+    は:'하', ひ:'히', ふ:'후', へ:'헤', ほ:'호',
+    ま:'마', み:'미', む:'무', め:'메', も:'모',
+    や:'야', ゆ:'유', よ:'요',
+    ら:'라', り:'리', る:'루', れ:'레', ろ:'로',
+    わ:'와', を:'오', ん:'응'
+  };
+  return c.kr || map[c.char] || c.romaji || '';
+}
+
 function renderTrace() {
   const data = currentLearnType === 'hiragana' ? HIRAGANA : KATAKANA;
   const c = data[currentCharIdx];
+
   document.getElementById('trace-type-label').textContent =
     currentLearnType === 'hiragana' ? '히라가나 따라쓰기' : '가타카나 따라쓰기';
-  document.getElementById('trace-char-name').textContent = `${c.char} (${c.romaji})`;
+
+  document.getElementById('trace-char-name').textContent =
+    `${c.char} (${getKrPronunciation(c)})`;
 
   const canvas = document.getElementById('trace-canvas');
   traceCtx = canvas.getContext('2d');
 
-  // 획순 점 (간단히 3획으로 가정)
   const dots = document.getElementById('stroke-dots');
   dots.innerHTML = '';
+
   const strokes = getStrokeCount(c.char);
   for (let i=0; i<strokes; i++) {
     const d = document.createElement('div');
@@ -1580,7 +1599,6 @@ function clearCanvas() {
   tracePaths = [];
   document.getElementById('canvas-hint').style.display = 'block';
 
-  // 격자선
   traceCtx.strokeStyle = 'rgba(200,220,255,0.4)';
   traceCtx.lineWidth = 1;
   traceCtx.setLineDash([8,8]);
@@ -1590,19 +1608,19 @@ function clearCanvas() {
   traceCtx.stroke();
   traceCtx.setLineDash([]);
 
-  // 가이드 글자
   const data = currentLearnType === 'hiragana' ? HIRAGANA : KATAKANA;
   const c = data[currentCharIdx];
+
   traceCtx.font = 'bold 380px "Noto Sans JP"';
   traceCtx.fillStyle = 'rgba(150,190,255,0.18)';
   traceCtx.textAlign = 'center';
   traceCtx.textBaseline = 'middle';
   traceCtx.fillText(c.char, 300, 310);
 
-  // 획순 초기화
   document.querySelectorAll('.stroke-dot').forEach(d => {
     d.classList.remove('done','active');
   });
+
   const first = document.getElementById('sdot-0');
   if (first) first.classList.add('active');
 }
@@ -1644,8 +1662,13 @@ function setupTraceEvents() {
     if (!isDrawing) return;
     isDrawing = false;
     traceStrokeCount++;
+
     const dot = document.getElementById(`sdot-${traceStrokeCount-1}`);
-    if (dot) { dot.classList.remove('active'); dot.classList.add('done'); }
+    if (dot) {
+      dot.classList.remove('active');
+      dot.classList.add('done');
+    }
+
     const next = document.getElementById(`sdot-${traceStrokeCount}`);
     if (next) next.classList.add('active');
   }
@@ -1661,45 +1684,66 @@ function setupTraceEvents() {
 
 function playAnimation() {
   clearCanvas();
+
   const data = currentLearnType === 'hiragana' ? HIRAGANA : KATAKANA;
   const c = data[currentCharIdx];
-  // 간단한 글자 표시 애니메이션 (실제 획순 SVG 없으므로 페이드인)
+
   let alpha = 0;
+
   const anim = setInterval(() => {
     traceCtx.clearRect(0,0,600,600);
-    // 격자
+
     traceCtx.strokeStyle = 'rgba(200,220,255,0.4)';
-    traceCtx.lineWidth = 1; traceCtx.setLineDash([8,8]);
+    traceCtx.lineWidth = 1;
+    traceCtx.setLineDash([8,8]);
     traceCtx.beginPath();
     traceCtx.moveTo(300,0); traceCtx.lineTo(300,600);
     traceCtx.moveTo(0,300); traceCtx.lineTo(600,300);
-    traceCtx.stroke(); traceCtx.setLineDash([]);
-    // 글자
+    traceCtx.stroke();
+    traceCtx.setLineDash([]);
+
     alpha += 0.04;
     traceCtx.font = 'bold 380px "Noto Sans JP"';
     traceCtx.fillStyle = `rgba(91,141,239,${Math.min(alpha,0.7)})`;
     traceCtx.textAlign = 'center';
     traceCtx.textBaseline = 'middle';
     traceCtx.fillText(c.char, 300, 310);
+
     if (alpha >= 1) {
       clearInterval(anim);
       setTimeout(clearCanvas, 600);
     }
   }, 30);
+
   showToast('획순을 눈으로 확인하고 따라써봐요!');
 }
 
 function checkTrace() {
-  if (tracePaths.length === 0) { showToast('먼저 글자를 써봐요! ✍️'); return; }
+  if (tracePaths.length === 0) {
+    showToast('먼저 글자를 써봐요! ✍️');
+    return;
+  }
+
   const data = currentLearnType === 'hiragana' ? HIRAGANA : KATAKANA;
   const c = data[currentCharIdx];
+
   const r = addStars(2);
   const msg = PRAISE[Math.floor(Math.random()*PRAISE.length)];
+
   showCelebrate('✨', msg, `⭐ 별 2개 획득! 총 ${r.stars}개`);
   spawnParticles(['⭐','💫','✨','🌸','💕']);
   speak(c.char);
-}
 
+  setTimeout(() => {
+    if (currentCharIdx < data.length - 1) {
+      currentCharIdx++;
+      renderTrace();
+      showToast(`다음 글자 ${data[currentCharIdx].char} (${getKrPronunciation(data[currentCharIdx])}) ✨`);
+    } else {
+      showCelebrate('🎉', '모두 완료했어요!', '정말 잘했어 지윤아 ☁️🌈');
+    }
+  }, 1200);
+}
 /* ═══════════════════════════════════════════════════════
    QUIZ
 ═══════════════════════════════════════════════════════ */
