@@ -700,12 +700,7 @@ let currentLDWYear = '2026', currentLDWMonth = '6';
 let currentRYHYear = '2026', currentRYHMonth = '6';
 
 function queryKDS(){
-  const prevKey = `kds_${currentKDSYear}_${currentKDSMonth}`;
-  const gdata = {};
-  const mucoEl = document.getElementById('q_muco');
-  if(mucoEl) gdata['muco'] = mucoEl.value;
-  localStorage.setItem(prevKey, JSON.stringify(gdata));
-  localStorage.setItem(prevKey+'_extra', JSON.stringify(extraItems));
+  flushSaves('kds');
 
   currentKDSYear = document.getElementById('gumiYear').value;
   currentKDSMonth = document.getElementById('gumiMonth').value;
@@ -714,13 +709,7 @@ function queryKDS(){
 }
 
 function queryKKJ(){
-  const prevKey = `kkj_${currentKKJYear}_${currentKKJMonth}`;
-  const data = {};
-  [...GL.map(i=>i.id), ...SAIL.map(i=>i.id)].forEach(id=>{
-    const el = document.getElementById('q_'+id);
-    if(el) data[id] = el.value;
-  });
-  localStorage.setItem(prevKey, JSON.stringify(data));
+  flushSaves('kkj');
 
   currentKKJYear = document.getElementById('selYear').value;
   currentKKJMonth = document.getElementById('selMonth').value;
@@ -729,7 +718,7 @@ function queryKKJ(){
 }
 
 function queryLDW(){
-  saveGeneric('ldw', LDW, 'ldw-rows');
+  flushSaves('ldw');
   currentLDWYear = document.getElementById('ldwYear').value;
   currentLDWMonth = document.getElementById('ldwMonth').value;
   updateGenericLabel('ldw');
@@ -737,7 +726,7 @@ function queryLDW(){
 }
 
 function queryRYH(){
-  saveGeneric('ryh', RYH, 'ryh-rows');
+  flushSaves('ryh');
   currentRYHYear = document.getElementById('ryhYear').value;
   currentRYHMonth = document.getElementById('ryhMonth').value;
   updateGenericLabel('ryh');
@@ -746,50 +735,72 @@ function queryRYH(){
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwbRV_ktxwI2ra-mgJKnMjQ5uJC34UAXeuRYt03qclwYId5qg9YovoL_HAXPfQiRTLW/exec';
 
-let saveTimer = null;
-function schedSave(fn){ clearTimeout(saveTimer); saveTimer = setTimeout(fn, 800); }
+/* ===== [실험용 복사본] 저장 방식 =====
+   - 원본 구글 시트는 "읽기만" 합니다. 이 복사본은 원본 시트에 절대 쓰지 않습니다.
+   - 입력/수정한 값은 이 기기 브라우저(localStorage, 'test_' 접두어)에만 저장됩니다.
+   - 불러올 때: 이 기기에 저장한 값이 있으면 그것, 없으면 원본 시트 값을 보여줍니다. */
+const LOCAL_PREFIX = 'test_';
 
 async function gasGet(key){
+  try{
+    const local = localStorage.getItem(LOCAL_PREFIX+key);
+    if(local !== null) return JSON.parse(local);
+  }catch(e){}
   try{
     const r = await fetch(GAS_URL+'?key='+encodeURIComponent(key));
     const t = await r.text();
     return t ? JSON.parse(t) : null;
-  }catch(e){ return localStorage.getItem(key) ? JSON.parse(localStorage.getItem(key)) : null; }
+  }catch(e){ return null; }
 }
 
 async function gasSet(key, value){
-  localStorage.setItem(key, JSON.stringify(value));
-  try{
-    const p = new URLSearchParams({key, value: JSON.stringify(value)});
-    await fetch(GAS_URL, {method:'POST', body: p});
-  }catch(e){}
+  try{ localStorage.setItem(LOCAL_PREFIX+key, JSON.stringify(value)); }catch(e){}
+  // 원본 시트로 보내는 POST 없음 (의도적으로 제거)
+}
+
+/* ===== 월 밀림 방지 =====
+   예전 문제: 0.8초 뒤 저장할 때 "그 순간 선택된 달"로 저장 → 달을 바꾸면 이전 달 숫자가 새 달에 저장됨.
+             저장 예약이 1개뿐이라 여러 거래처를 연달아 저장하면 마지막 것만 저장됨.
+   바꾼 점: ① 입력한 순간에 "어느 달 데이터인지 + 숫자"를 확정
+            ② 화면에 실제로 불러온 달(loadedKey)로만 저장, 불러오는 중에는 저장 안 함
+            ③ 저장 예약을 거래처·달마다 따로 관리, 달 바꾸기 전에 대기 중인 저장을 즉시 실행
+            ④ 늦게 도착한 이전 달 불러오기 결과는 버림 */
+const loadedKey = {kkj:null, kds:null, ldw:null, ryh:null, kjh:null};
+const pendingSaves = {};
+function schedSave(key, fn){
+  if(pendingSaves[key]) clearTimeout(pendingSaves[key].t);
+  pendingSaves[key] = {fn, t: setTimeout(()=>{ delete pendingSaves[key]; fn(); }, 800)};
+}
+function flushSaves(prefix){
+  Object.keys(pendingSaves).forEach(k=>{
+    if(k.startsWith(prefix+'_')){
+      const ps = pendingSaves[k]; clearTimeout(ps.t); delete pendingSaves[k]; ps.fn();
+    }
+  });
+}
+function selKey(prefix, yId, mId){
+  return `${prefix}_${document.getElementById(yId).value}_${document.getElementById(mId).value}`;
 }
 
 function saveKKJ(){
-  schedSave(()=>{
-    const y = document.getElementById('selYear').value;
-    const m = document.getElementById('selMonth').value;
-    const key = `kkj_${y}_${m}`;
-    const data = {};
-    [...GL.map(i=>i.id), ...SAIL.map(i=>i.id)].forEach(id=>{
-      const el = document.getElementById('q_'+id);
-      if(el) data[id] = el.value;
-    });
-    gasSet(key, data);
+  const key = loadedKey.kkj;
+  if(!key) return; // 불러오는 중이면 저장하지 않음
+  const data = {};
+  [...GL.map(i=>i.id), ...SAIL.map(i=>i.id)].forEach(id=>{
+    const el = document.getElementById('q_'+id);
+    if(el) data[id] = el.value;
   });
+  schedSave(key, ()=>gasSet(key, data));
 }
 
 function saveKDS(){
-  schedSave(()=>{
-    const gy = document.getElementById('gumiYear').value;
-    const gm = document.getElementById('gumiMonth').value;
-    const gkey = `kds_${gy}_${gm}`;
-    const gdata = {};
-    const mucoEl = document.getElementById('q_muco');
-    if(mucoEl) gdata['muco'] = mucoEl.value;
-    gasSet(gkey, gdata);
-    gasSet(gkey+'_extra', extraItems);
-  });
+  const gkey = loadedKey.kds;
+  if(!gkey) return;
+  const gdata = {};
+  const mucoEl = document.getElementById('q_muco');
+  if(mucoEl) gdata['muco'] = mucoEl.value;
+  const extraCopy = JSON.parse(JSON.stringify(extraItems));
+  schedSave(gkey, ()=>{ gasSet(gkey, gdata); gasSet(gkey+'_extra', extraCopy); });
 }
 
 /* ===== LDW / RYH 공용 처리 함수 =====
@@ -798,22 +809,21 @@ function saveKDS(){
    탭 HTML + 아래 함수 호출부만 복제하면 됩니다.
 */
 function saveGeneric(prefix, items, tbodyId){
-  schedSave(()=>{
-    const y = document.getElementById(prefix+'Year').value;
-    const m = document.getElementById(prefix+'Month').value;
-    const key = `${prefix}_${y}_${m}`;
-    const data = {};
-    items.forEach(it=>{
-      const el = document.getElementById(`${prefix}_q_${it.id}`);
-      if(el) data[it.id] = el.value;
-    });
-    gasSet(key, data);
+  const key = loadedKey[prefix];
+  if(!key) return;
+  const data = {};
+  items.forEach(it=>{
+    const el = document.getElementById(`${prefix}_q_${it.id}`);
+    if(el) data[it.id] = el.value;
   });
+  schedSave(key, ()=>gasSet(key, data));
 }
 
 async function loadGeneric(prefix, items, tbodyId, totalId, y, m){
   const key = `${prefix}_${y}_${m}`;
+  loadedKey[prefix] = null;
   const data = await gasGet(key);
+  if(key !== selKey(prefix, prefix+'Year', prefix+'Month')) return;
   renderGenericRows(prefix, items, tbodyId);
   if(data){
     items.forEach(it=>{
@@ -824,6 +834,7 @@ async function loadGeneric(prefix, items, tbodyId, totalId, y, m){
       }
     });
   }
+  loadedKey[prefix] = key;
   calcGeneric(prefix, items, totalId);
 }
 
@@ -925,21 +936,18 @@ function calcSaveKJH(el){
 }
 
 function saveKJH(){
-  schedSave(()=>{
-    const y = document.getElementById('kjhYear').value;
-    const m = document.getElementById('kjhMonth').value;
-    const key = `kjh_${y}_${m}`;
-    const data = {huru: document.getElementById('kjh_q_huru').value};
-    KJH_OUTER.forEach(it=>{ data[it.id] = document.getElementById('kjh_q_'+it.id).value; });
-    gasSet(key, data);
-  });
+  const key = loadedKey.kjh;
+  if(!key) return;
+  const data = {huru: document.getElementById('kjh_q_huru').value};
+  KJH_OUTER.forEach(it=>{ data[it.id] = document.getElementById('kjh_q_'+it.id).value; });
+  schedSave(key, ()=>gasSet(key, data));
 }
 
 async function loadKJH(){
-  const y = document.getElementById('kjhYear').value;
-  const m = document.getElementById('kjhMonth').value;
-  const key = `kjh_${y}_${m}`;
+  const key = selKey('kjh','kjhYear','kjhMonth');
+  loadedKey.kjh = null;
   const data = await gasGet(key);
+  if(key !== selKey('kjh','kjhYear','kjhMonth')) return;
   const ids = ['huru', ...KJH_OUTER.map(i=>i.id)];
   ids.forEach(id=>{
     const el = document.getElementById('kjh_q_'+id);
@@ -951,11 +959,12 @@ async function loadKJH(){
       el.value = '0';
     }
   });
+  loadedKey.kjh = key;
   calcKJH();
 }
 
 function queryKJH(){
-  saveKJH();
+  flushSaves('kjh');
   currentKJHYear = document.getElementById('kjhYear').value;
   currentKJHMonth = document.getElementById('kjhMonth').value;
   updateKJHLabel();
@@ -1159,10 +1168,11 @@ function closeAdmin(){
 }
 
 async function loadKDS(){
-  const gy = document.getElementById('gumiYear').value;
-  const gm = document.getElementById('gumiMonth').value;
-  const gkey = `kds_${gy}_${gm}`;
+  const gkey = selKey('kds','gumiYear','gumiMonth');
+  loadedKey.kds = null;
   const gdata = await gasGet(gkey);
+  const extraData = await gasGet(gkey+'_extra');
+  if(gkey !== selKey('kds','gumiYear','gumiMonth')) return;
   const mucoEl = document.getElementById('q_muco');
   if(gdata){
     const v = parseFloat((gdata['muco']||'0').toString().replace(/,/g,''))||0;
@@ -1171,16 +1181,16 @@ async function loadKDS(){
     if(mucoEl) mucoEl.value = '0';
   }
   calcGumi();
-  const extraData = await gasGet(gkey+'_extra');
   extraItems = extraData || [];
   renderExtraItems();
+  loadedKey.kds = gkey;
 }
 
 async function loadKKJ(){
-  const y = document.getElementById('selYear').value;
-  const m = document.getElementById('selMonth').value;
-  const key = `kkj_${y}_${m}`;
+  const key = selKey('kkj','selYear','selMonth');
+  loadedKey.kkj = null;
   const data = await gasGet(key);
+  if(key !== selKey('kkj','selYear','selMonth')) return; // 그새 달이 바뀜 → 버림
   if(data){
     Object.entries(data).forEach(([id, val])=>{
       const el = document.getElementById('q_'+id);
@@ -1192,6 +1202,7 @@ async function loadKKJ(){
       if(el) el.value = 0;
     });
   }
+  loadedKey.kkj = key;
   calc();
 }
 
